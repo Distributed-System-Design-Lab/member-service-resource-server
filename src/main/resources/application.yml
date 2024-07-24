@@ -1,6 +1,6 @@
-server: 
+server:
   port: 8081
-  servlet: 
+  servlet:
     context-path: /resource-server
 
 spring:
@@ -8,5 +8,15 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8083/auth/realms/baeldung
-          jwk-set-uri: http://localhost:8083/auth/realms/baeldung/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8083/auth/realms/PeopleSystem
+          jwk-set-uri: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/certs
+
+keycloak:
+  auth-server-url: http://localhost:8083/auth
+  realm: PeopleSystem
+  resource: peoplesystem
+  public-client: true
+  bearer-only: true
+  cors: true
+  credentials:
+    secret: UaRytwZBwvqC25KP0Sk52siWcjIaQerT
