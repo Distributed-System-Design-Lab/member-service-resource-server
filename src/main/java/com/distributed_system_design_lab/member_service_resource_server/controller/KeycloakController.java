@@ -41,7 +41,7 @@ public class KeycloakController {
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
         String clientId = "peoplesystem";
         String redirectUri = "http://localhost:8081/resource-server/keycloak/redirect";
-        String clientSecret = "UaRytwZBwvqC25KP0Sk52siWcjIaQerT";
+        String clientSecret = "wm4yca6CZMP7ZbYPBarDrU0xLQXkHQo7";
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {

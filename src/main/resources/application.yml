@@ -10,6 +10,11 @@ spring:
         jwt:
           issuer-uri: http://localhost:8083/auth/realms/PeopleSystem
           jwk-set-uri: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/certs
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://peoplesystem.tatdvsonorth.com:5432/peoplesystem
+    username: sa
+    password: Wawi247525=
 
 keycloak:
   auth-server-url: http://localhost:8083/auth
@@ -19,4 +24,4 @@ keycloak:
   bearer-only: true
   cors: true
   credentials:
-    secret: UaRytwZBwvqC25KP0Sk52siWcjIaQerT
+    secret: wm4yca6CZMP7ZbYPBarDrU0xLQXkHQo7
