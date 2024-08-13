@@ -47,6 +47,12 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-spring-boot-starter</artifactId>
+            <version>23.0.0</version>
+        </dependency>
+
         <!-- persistence -->
 
         <dependency>
@@ -83,12 +89,6 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 		</dependency>
-
-        <dependency>
-            <groupId>org.keycloak</groupId>
-            <artifactId>keycloak-spring-boot-starter</artifactId>
-            <version>23.0.0</version>
-        </dependency>
 
     </dependencies>
 

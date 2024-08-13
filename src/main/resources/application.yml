@@ -23,17 +23,10 @@ keycloak:
   public-client: false
   cors: true
   credentials:
-    secret: wm4yca6CZMP7ZbYPBarDrU0xLQXkHQo7
+    secret: WCQaVZubI44qHLgCKaOnZJ5LbQQfwyap
   bearer-only: true
   security-constraints:
-    - authRoles: default
+    - authRoles: default-roles-peoplesystem
       securityCollections:
         - patterns:
             - /* # The paths requiring admin access
-
-openid:
-  configuration:
-    authorization_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/auth
-    token_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token
-    userinfo_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/userinfo
-    jwks_uri: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/certs
