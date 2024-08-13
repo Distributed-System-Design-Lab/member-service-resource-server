@@ -19,9 +19,21 @@ spring:
 keycloak:
   auth-server-url: http://localhost:8083/auth
   realm: PeopleSystem
-  resource: peoplesystem
-  public-client: true
-  bearer-only: true
+  resource: peoplesystem # Ensure this matches your Keycloak client's `client_id`
+  public-client: false
   cors: true
   credentials:
     secret: wm4yca6CZMP7ZbYPBarDrU0xLQXkHQo7
+  bearer-only: true
+  security-constraints:
+    - authRoles: default
+      securityCollections:
+        - patterns:
+            - /* # The paths requiring admin access
+
+openid:
+  configuration:
+    authorization_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/auth
+    token_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token
+    userinfo_endpoint: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/userinfo
+    jwks_uri: http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/certs
