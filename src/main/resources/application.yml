@@ -23,10 +23,16 @@ keycloak:
   public-client: false
   cors: true
   credentials:
-    secret: WCQaVZubI44qHLgCKaOnZJ5LbQQfwyap
+    secret: 7YQeh5Rfd73E5tliixooqDXJyn5Dhpet
   bearer-only: true
   security-constraints:
     - authRoles: default-roles-peoplesystem
       securityCollections:
         - patterns:
             - /* # The paths requiring admin access
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html

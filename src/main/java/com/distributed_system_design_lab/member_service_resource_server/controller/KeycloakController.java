@@ -1,5 +1,11 @@
 package com.distributed_system_design_lab.member_service_resource_server.controller;
 
+import java.io.IOException;
+import java.util.Date;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,11 +16,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.distributed_system_design_lab.member_service_resource_server.entity.Keycloak;
+import com.distributed_system_design_lab.member_service_resource_server.service.KeycloakService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -23,10 +32,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Date;
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/keycloak")
@@ -37,11 +42,14 @@ public class KeycloakController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private KeycloakService keycloakService;
+
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
         String clientId = "peoplesystem";
         String redirectUri = "http://localhost:8081/resource-server/keycloak/redirect";
-        String clientSecret = "WCQaVZubI44qHLgCKaOnZJ5LbQQfwyap";
+        String clientSecret = "7YQeh5Rfd73E5tliixooqDXJyn5Dhpet";
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {
@@ -108,4 +116,50 @@ public class KeycloakController {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error processing OAuth redirect");
         }
     }
+
+    // Logout API to revoke tokens
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestParam String accessToken, @RequestParam String refreshToken) {
+        String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + accessToken);
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("refresh_token", refreshToken);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            restTemplate.exchange(logoutUrl, HttpMethod.POST, request, String.class);
+            return ResponseEntity.ok("Logged out successfully");
+        } catch (Exception e) {
+            log.error("Logout failed", e);
+            return ResponseEntity.status(500).body("Logout failed");
+        }
+    }
+
+    // API to fetch user information by username or email
+    // API to fetch user information by username or email
+    @GetMapping("/findUserInfo")
+    public ResponseEntity<?> findUserInfo(@RequestParam(required = false) String username,
+            @RequestParam(required = false) String email) {
+        if (username == null && email == null) {
+            return ResponseEntity.badRequest().body("Either username or email must be provided.");
+        }
+
+        Optional<Keycloak> userInfo = Optional.empty();
+
+        if (username != null) {
+            Keycloak user = keycloakService.findByUsername(username);
+            userInfo = Optional.ofNullable(user);
+        } else if (email != null) {
+            Keycloak user = keycloakService.findByEmail(email);
+            userInfo = Optional.ofNullable(user);
+        }
+
+        if (userInfo.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found.");
+        }
+
+        return ResponseEntity.ok(userInfo.get());
+    }
+
 }

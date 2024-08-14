@@ -8,7 +8,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "keycloak")
+@Table(name = "keycloak", indexes = {
+        @Index(name = "inx_username", columnList = "username"),
+        @Index(name = "inx_email", columnList = "email")
+})
 public class Keycloak {
 
     @Id
