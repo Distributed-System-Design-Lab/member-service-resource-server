@@ -15,6 +15,10 @@ spring:
     url: jdbc:postgresql://peoplesystem.tatdvsonorth.com:5432/peoplesystem
     username: sa
     password: Wawi247525=
+    hikari:
+      max-lifetime: 1800000
+      idle-timeout: 600000
+      connection-timeout: 30000
 
 keycloak:
   auth-server-url: http://localhost:8083/auth

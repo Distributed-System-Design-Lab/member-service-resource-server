@@ -108,6 +108,24 @@ public class KeycloakController {
             String username = (String) userInfo.get("preferred_username");
             String email = (String) userInfo.get("email");
 
+            // Check if user already exists in database
+            Optional<Keycloak> existingUser = Optional.of(keycloakService.findByUsername(username));
+
+            if (!existingUser.isPresent()) {
+                // Create new Keycloak user entity and save to database
+                Keycloak newUser = new Keycloak();
+                newUser.setUsername(username);
+                newUser.setEmail(email);
+                newUser.setGivenName((String) userInfo.get("given_name"));
+                newUser.setFamilyName((String) userInfo.get("family_name"));
+                newUser.setEmailVerified((Boolean) userInfo.get("email_verified"));
+                newUser.setSub((String) userInfo.get("sub"));
+                keycloakService.save(newUser);
+                log.info("New user saved in Keycloak table: {}", newUser);
+            } else {
+                log.info("User already exists in the database: {}", existingUser.get());
+            }
+
             // Redirect back to frontend with user info and token
             response.sendRedirect(
                     "http://localhost:3000/" + "?username=" + username + "&email=" + email + "&token=" + accessToken);
@@ -141,25 +159,31 @@ public class KeycloakController {
     @GetMapping("/findUserInfo")
     public ResponseEntity<?> findUserInfo(@RequestParam(required = false) String username,
             @RequestParam(required = false) String email) {
+        // Validate input
         if (username == null && email == null) {
             return ResponseEntity.badRequest().body("Either username or email must be provided.");
         }
 
-        Optional<Keycloak> userInfo = Optional.empty();
+        try {
+            Optional<Keycloak> userInfo = Optional.empty();
 
-        if (username != null) {
-            Keycloak user = keycloakService.findByUsername(username);
-            userInfo = Optional.ofNullable(user);
-        } else if (email != null) {
-            Keycloak user = keycloakService.findByEmail(email);
-            userInfo = Optional.ofNullable(user);
+            if (username != null) {
+                Keycloak user = keycloakService.findByUsername(username);
+                userInfo = Optional.ofNullable(user);
+            } else if (email != null) {
+                Keycloak user = keycloakService.findByEmail(email);
+                userInfo = Optional.ofNullable(user);
+            }
+
+            if (userInfo.isEmpty()) {
+                return ResponseEntity.status(404).body("User not found.");
+            }
+
+            return ResponseEntity.ok(userInfo.get());
+
+        } catch (Exception e) {
+            log.error("Error fetching user information", e);
+            return ResponseEntity.status(500).body("An error occurred while fetching user information.");
         }
-
-        if (userInfo.isEmpty()) {
-            return ResponseEntity.status(404).body("User not found.");
-        }
-
-        return ResponseEntity.ok(userInfo.get());
     }
-
 }
