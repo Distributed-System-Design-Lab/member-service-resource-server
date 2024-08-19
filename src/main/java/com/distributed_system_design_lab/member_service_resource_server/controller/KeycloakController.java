@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -35,6 +34,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/keycloak")
@@ -52,10 +52,10 @@ public class KeycloakController {
     private String clientSecret = "7YQeh5Rfd73E5tliixooqDXJyn5Dhpet";
 
     @GetMapping("/redirect")
-    public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
+    public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response, HttpSession session)
+            throws IOException {
         System.err.println(code);
         String redirectUri = "http://localhost:8081/resource-server/keycloak/redirect";
-
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {
@@ -111,14 +111,14 @@ public class KeycloakController {
 
             // Log Keycloak user info
             log.info("Keycloak User Info: {}", userInfo);
-
+            String preferredUsername = (String) userInfo.get("preferred_username");
+            session.setAttribute("preferred_username", preferredUsername);
             // Extract user info
-            String username = (String) userInfo.get("preferred_username");
-            keycloakService.deleteByUsername(username);
+            keycloakService.deleteByUsername(preferredUsername);
 
             // Create or update Keycloak user entity and save to database
             Keycloak user = new Keycloak();
-            user.setUsername(username);
+            user.setPreferredUsername(preferredUsername);
             user.setEmail((String) userInfo.get("email"));
             user.setGivenName((String) userInfo.get("given_name"));
             user.setFamilyName((String) userInfo.get("family_name"));
@@ -134,7 +134,8 @@ public class KeycloakController {
 
             // Redirect back to frontend with user info and token
             response.sendRedirect(
-                    "http://localhost:3000/" + "?username=" + username + "&email=" + user.getEmail() + "&token="
+                    "http://localhost:3000/" + "?username=" + preferredUsername + "&email=" + user.getEmail()
+                            + "&token="
                             + accessToken);
         } catch (Exception e) {
             log.error("Error processing OAuth redirect", e);
@@ -145,10 +146,17 @@ public class KeycloakController {
     // Logout API to revoke tokens
     @CrossOrigin
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(Keycloak keycloak) {
+    public ResponseEntity<?> logout(HttpSession session) {
         String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
-
-        String refreshToken = keycloak.getRefreshToken();
+        String preferredUsername = (String) session.getAttribute("preferred_username");
+        if (preferredUsername == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No user found in session.");
+        }
+        Keycloak keycloakUser = keycloakService.findByUsername(preferredUsername);
+        if (keycloakUser == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+        String refreshToken = keycloakUser.getRefreshToken();
         System.err.println("refreshToken" + refreshToken);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/x-www-form-urlencoded");
@@ -162,7 +170,9 @@ public class KeycloakController {
 
         try {
             restTemplate.exchange(logoutUrl, HttpMethod.POST, entity, String.class);
-            keycloakService.deleteByUsername(keycloak.getUsername());
+            keycloakService.deleteByUsername(preferredUsername);
+            session.invalidate();
+
             return ResponseEntity.ok("Logout successful");
         } catch (Exception e) {
             log.error("Logout failed", e);

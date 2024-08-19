@@ -16,8 +16,8 @@ public class KeycloakService {
         return keycloakRepository.save(keycloak);
     }
 
-    public Keycloak findByUsername(String username) {
-        return keycloakRepository.findByUsername(username);
+    public Keycloak findByUsername(String preferredUsername) {
+        return keycloakRepository.findByPreferredUsername(preferredUsername);
     }
 
     public Keycloak findByEmail(String email) {
@@ -25,7 +25,7 @@ public class KeycloakService {
     }
 
     @Transactional
-    public void deleteByUsername(String username) {
-        keycloakRepository.deleteByUsername(username);
+    public void deleteByUsername(String preferredUsername) {
+        keycloakRepository.deleteByPreferredUsername(preferredUsername);
     }
 }

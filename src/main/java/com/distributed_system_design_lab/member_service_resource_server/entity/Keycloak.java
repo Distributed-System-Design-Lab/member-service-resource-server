@@ -2,6 +2,7 @@ package com.distributed_system_design_lab.member_service_resource_server.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "keycloak", indexes = {
@@ -15,7 +16,7 @@ public class Keycloak {
     private Long id;
 
     @Column(nullable = false, length = 255)
-    private String username;
+    private String preferredUsername;
 
     @Column(length = 255)
     private String email;
@@ -44,14 +45,14 @@ public class Keycloak {
     @Column(name = "issued_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Instant issuedAt;
 
-    // Default constructor
     public Keycloak() {
     }
 
-    // Parameterized constructor
-    public Keycloak(String username, String email, String givenName, String familyName, Boolean emailVerified,
-            String sub, String accessToken, String refreshToken, Instant expiresIn, Instant issuedAt) {
-        this.username = username;
+    public Keycloak(Long id, String preferredUsername, String email, String givenName, String familyName,
+            Boolean emailVerified, String sub, String accessToken, String refreshToken, Instant expiresIn,
+            Instant issuedAt) {
+        this.id = id;
+        this.preferredUsername = preferredUsername;
         this.email = email;
         this.givenName = givenName;
         this.familyName = familyName;
@@ -63,25 +64,24 @@ public class Keycloak {
         this.issuedAt = issuedAt;
     }
 
-    // Getters and Setters
     public Long getId() {
-        return id;
+        return this.id;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getPreferredUsername() {
+        return this.preferredUsername;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setPreferredUsername(String preferredUsername) {
+        this.preferredUsername = preferredUsername;
     }
 
     public String getEmail() {
-        return email;
+        return this.email;
     }
 
     public void setEmail(String email) {
@@ -89,7 +89,7 @@ public class Keycloak {
     }
 
     public String getGivenName() {
-        return givenName;
+        return this.givenName;
     }
 
     public void setGivenName(String givenName) {
@@ -97,15 +97,19 @@ public class Keycloak {
     }
 
     public String getFamilyName() {
-        return familyName;
+        return this.familyName;
     }
 
     public void setFamilyName(String familyName) {
         this.familyName = familyName;
     }
 
+    public Boolean isEmailVerified() {
+        return this.emailVerified;
+    }
+
     public Boolean getEmailVerified() {
-        return emailVerified;
+        return this.emailVerified;
     }
 
     public void setEmailVerified(Boolean emailVerified) {
@@ -113,7 +117,7 @@ public class Keycloak {
     }
 
     public String getSub() {
-        return sub;
+        return this.sub;
     }
 
     public void setSub(String sub) {
@@ -121,7 +125,7 @@ public class Keycloak {
     }
 
     public String getAccessToken() {
-        return accessToken;
+        return this.accessToken;
     }
 
     public void setAccessToken(String accessToken) {
@@ -129,7 +133,7 @@ public class Keycloak {
     }
 
     public String getRefreshToken() {
-        return refreshToken;
+        return this.refreshToken;
     }
 
     public void setRefreshToken(String refreshToken) {
@@ -137,7 +141,7 @@ public class Keycloak {
     }
 
     public Instant getExpiresIn() {
-        return expiresIn;
+        return this.expiresIn;
     }
 
     public void setExpiresIn(Instant expiresIn) {
@@ -145,27 +149,106 @@ public class Keycloak {
     }
 
     public Instant getIssuedAt() {
-        return issuedAt;
+        return this.issuedAt;
     }
 
     public void setIssuedAt(Instant issuedAt) {
         this.issuedAt = issuedAt;
     }
 
+    public Keycloak id(Long id) {
+        setId(id);
+        return this;
+    }
+
+    public Keycloak preferredUsername(String preferredUsername) {
+        setPreferredUsername(preferredUsername);
+        return this;
+    }
+
+    public Keycloak email(String email) {
+        setEmail(email);
+        return this;
+    }
+
+    public Keycloak givenName(String givenName) {
+        setGivenName(givenName);
+        return this;
+    }
+
+    public Keycloak familyName(String familyName) {
+        setFamilyName(familyName);
+        return this;
+    }
+
+    public Keycloak emailVerified(Boolean emailVerified) {
+        setEmailVerified(emailVerified);
+        return this;
+    }
+
+    public Keycloak sub(String sub) {
+        setSub(sub);
+        return this;
+    }
+
+    public Keycloak accessToken(String accessToken) {
+        setAccessToken(accessToken);
+        return this;
+    }
+
+    public Keycloak refreshToken(String refreshToken) {
+        setRefreshToken(refreshToken);
+        return this;
+    }
+
+    public Keycloak expiresIn(Instant expiresIn) {
+        setExpiresIn(expiresIn);
+        return this;
+    }
+
+    public Keycloak issuedAt(Instant issuedAt) {
+        setIssuedAt(issuedAt);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (!(o instanceof Keycloak)) {
+            return false;
+        }
+        Keycloak keycloak = (Keycloak) o;
+        return Objects.equals(id, keycloak.id) && Objects.equals(preferredUsername, keycloak.preferredUsername)
+                && Objects.equals(email, keycloak.email) && Objects.equals(givenName, keycloak.givenName)
+                && Objects.equals(familyName, keycloak.familyName)
+                && Objects.equals(emailVerified, keycloak.emailVerified) && Objects.equals(sub, keycloak.sub)
+                && Objects.equals(accessToken, keycloak.accessToken)
+                && Objects.equals(refreshToken, keycloak.refreshToken) && Objects.equals(expiresIn, keycloak.expiresIn)
+                && Objects.equals(issuedAt, keycloak.issuedAt);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, preferredUsername, email, givenName, familyName, emailVerified, sub, accessToken,
+                refreshToken, expiresIn, issuedAt);
+    }
+
     @Override
     public String toString() {
-        return "Keycloak{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                ", givenName='" + givenName + '\'' +
-                ", familyName='" + familyName + '\'' +
-                ", emailVerified=" + emailVerified +
-                ", sub='" + sub + '\'' +
-                ", accessToken='" + accessToken + '\'' +
-                ", refreshToken='" + refreshToken + '\'' +
-                ", expiresIn=" + expiresIn +
-                ", issuedAt=" + issuedAt +
-                '}';
+        return "{" +
+                " id='" + getId() + "'" +
+                ", preferredUsername='" + getPreferredUsername() + "'" +
+                ", email='" + getEmail() + "'" +
+                ", givenName='" + getGivenName() + "'" +
+                ", familyName='" + getFamilyName() + "'" +
+                ", emailVerified='" + isEmailVerified() + "'" +
+                ", sub='" + getSub() + "'" +
+                ", accessToken='" + getAccessToken() + "'" +
+                ", refreshToken='" + getRefreshToken() + "'" +
+                ", expiresIn='" + getExpiresIn() + "'" +
+                ", issuedAt='" + getIssuedAt() + "'" +
+                "}";
     }
+
 }

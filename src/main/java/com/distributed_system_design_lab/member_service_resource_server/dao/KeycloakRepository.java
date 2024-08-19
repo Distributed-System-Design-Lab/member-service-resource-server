@@ -8,9 +8,9 @@ import com.distributed_system_design_lab.member_service_resource_server.entity.K
 @Repository
 public interface KeycloakRepository extends JpaRepository<Keycloak, Long> {
 
-    Keycloak findByUsername(String username);
+    Keycloak findByPreferredUsername(String preferredUsername);
 
     Keycloak findByEmail(String email);
 
-    void deleteByUsername(String username);
+    void deleteByPreferredUsername(String preferredUsername);
 }

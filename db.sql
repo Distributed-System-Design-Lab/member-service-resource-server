@@ -1,6 +1,6 @@
 CREATE TABLE keycloak (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
+    preferred_username VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     given_name VARCHAR(255),
     family_name VARCHAR(255),
