@@ -2,10 +2,6 @@ package com.distributed_system_design_lab.member_service_resource_server.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "keycloak", indexes = {
@@ -24,6 +20,18 @@ public class Keycloak {
     @Column(length = 255)
     private String email;
 
+    @Column(length = 255)
+    private String givenName;
+
+    @Column(length = 255)
+    private String familyName;
+
+    @Column
+    private Boolean emailVerified;
+
+    @Column(length = 255)
+    private String sub;
+
     @Column(columnDefinition = "TEXT")
     private String accessToken;
 
@@ -41,10 +49,14 @@ public class Keycloak {
     }
 
     // Parameterized constructor
-    public Keycloak(String username, String email, String accessToken, String refreshToken, Instant expiresIn,
-            Instant issuedAt) {
+    public Keycloak(String username, String email, String givenName, String familyName, Boolean emailVerified,
+            String sub, String accessToken, String refreshToken, Instant expiresIn, Instant issuedAt) {
         this.username = username;
         this.email = email;
+        this.givenName = givenName;
+        this.familyName = familyName;
+        this.emailVerified = emailVerified;
+        this.sub = sub;
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.expiresIn = expiresIn;
@@ -74,6 +86,38 @@ public class Keycloak {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getGivenName() {
+        return givenName;
+    }
+
+    public void setGivenName(String givenName) {
+        this.givenName = givenName;
+    }
+
+    public String getFamilyName() {
+        return familyName;
+    }
+
+    public void setFamilyName(String familyName) {
+        this.familyName = familyName;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getSub() {
+        return sub;
+    }
+
+    public void setSub(String sub) {
+        this.sub = sub;
     }
 
     public String getAccessToken() {
@@ -114,6 +158,10 @@ public class Keycloak {
                 "id=" + id +
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
+                ", givenName='" + givenName + '\'' +
+                ", familyName='" + familyName + '\'' +
+                ", emailVerified=" + emailVerified +
+                ", sub='" + sub + '\'' +
                 ", accessToken='" + accessToken + '\'' +
                 ", refreshToken='" + refreshToken + '\'' +
                 ", expiresIn=" + expiresIn +

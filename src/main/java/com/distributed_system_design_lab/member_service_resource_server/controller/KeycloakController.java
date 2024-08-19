@@ -1,6 +1,7 @@
 package com.distributed_system_design_lab.member_service_resource_server.controller;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -12,9 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,11 +48,14 @@ public class KeycloakController {
     @Autowired
     private KeycloakService keycloakService;
 
+    private String clientId = "peoplesystem";
+    private String clientSecret = "7YQeh5Rfd73E5tliixooqDXJyn5Dhpet";
+
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response) throws IOException {
-        String clientId = "peoplesystem";
+        System.err.println(code);
         String redirectUri = "http://localhost:8081/resource-server/keycloak/redirect";
-        String clientSecret = "7YQeh5Rfd73E5tliixooqDXJyn5Dhpet";
+
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {
@@ -84,10 +90,12 @@ public class KeycloakController {
             HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(tokenParams, headers);
 
             ResponseEntity<Map> tokenResponse = restTemplate.exchange(tokenUrl, HttpMethod.POST, entity, Map.class);
+
             String accessToken = (String) tokenResponse.getBody().get("access_token");
+            String refreshToken = (String) tokenResponse.getBody().get("refresh_token");
 
             // Ensure the code is used only once
-            if (accessToken == null) {
+            if (accessToken == null || refreshToken == null) {
                 throw new RuntimeException("Failed to obtain access token");
             }
 
@@ -106,29 +114,28 @@ public class KeycloakController {
 
             // Extract user info
             String username = (String) userInfo.get("preferred_username");
-            String email = (String) userInfo.get("email");
+            keycloakService.deleteByUsername(username);
 
-            // Check if user already exists in database
-            Optional<Keycloak> existingUser = Optional.of(keycloakService.findByUsername(username));
+            // Create or update Keycloak user entity and save to database
+            Keycloak user = new Keycloak();
+            user.setUsername(username);
+            user.setEmail((String) userInfo.get("email"));
+            user.setGivenName((String) userInfo.get("given_name"));
+            user.setFamilyName((String) userInfo.get("family_name"));
+            user.setEmailVerified((Boolean) userInfo.get("email_verified"));
+            user.setSub((String) userInfo.get("sub"));
+            user.setAccessToken(accessToken);
+            user.setRefreshToken(refreshToken);
+            user.setIssuedAt(Instant.now());
+            user.setExpiresIn(Instant.now().plusSeconds(3600));
+            keycloakService.saveKeycloakData(user);
 
-            if (!existingUser.isPresent()) {
-                // Create new Keycloak user entity and save to database
-                Keycloak newUser = new Keycloak();
-                newUser.setUsername(username);
-                newUser.setEmail(email);
-                newUser.setGivenName((String) userInfo.get("given_name"));
-                newUser.setFamilyName((String) userInfo.get("family_name"));
-                newUser.setEmailVerified((Boolean) userInfo.get("email_verified"));
-                newUser.setSub((String) userInfo.get("sub"));
-                keycloakService.save(newUser);
-                log.info("New user saved in Keycloak table: {}", newUser);
-            } else {
-                log.info("User already exists in the database: {}", existingUser.get());
-            }
+            log.info("User saved or updated in Keycloak table: {}", user);
 
             // Redirect back to frontend with user info and token
             response.sendRedirect(
-                    "http://localhost:3000/" + "?username=" + username + "&email=" + email + "&token=" + accessToken);
+                    "http://localhost:3000/" + "?username=" + username + "&email=" + user.getEmail() + "&token="
+                            + accessToken);
         } catch (Exception e) {
             log.error("Error processing OAuth redirect", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error processing OAuth redirect");
@@ -136,54 +143,79 @@ public class KeycloakController {
     }
 
     // Logout API to revoke tokens
+    @CrossOrigin
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestParam String accessToken, @RequestParam String refreshToken) {
+    public ResponseEntity<?> logout(Keycloak keycloak) {
         String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + accessToken);
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("refresh_token", refreshToken);
 
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-            restTemplate.exchange(logoutUrl, HttpMethod.POST, request, String.class);
-            return ResponseEntity.ok("Logged out successfully");
+        String refreshToken = keycloak.getRefreshToken();
+        System.err.println("refreshToken" + refreshToken);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/x-www-form-urlencoded");
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+        body.add("refresh_token", refreshToken);
+
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            restTemplate.exchange(logoutUrl, HttpMethod.POST, entity, String.class);
+            keycloakService.deleteByUsername(keycloak.getUsername());
+            return ResponseEntity.ok("Logout successful");
         } catch (Exception e) {
             log.error("Logout failed", e);
-            return ResponseEntity.status(500).body("Logout failed");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Logout failed");
         }
     }
 
-    // API to fetch user information by username or email
-    // API to fetch user information by username or email
-    @GetMapping("/findUserInfo")
-    public ResponseEntity<?> findUserInfo(@RequestParam(required = false) String username,
-            @RequestParam(required = false) String email) {
-        // Validate input
-        if (username == null && email == null) {
-            return ResponseEntity.badRequest().body("Either username or email must be provided.");
-        }
+    @GetMapping("/getUserInfo")
+    public ResponseEntity<?> getUserInfo(@RequestParam("authorizationCode") String authorizationCode) {
+        // Token 請求的 URL
+        String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
+        // 請求 Token
         try {
-            Optional<Keycloak> userInfo = Optional.empty();
+            MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
+            bodyParams.add("client_id", clientId);
+            bodyParams.add("client_secret", clientSecret);
+            bodyParams.add("grant_type", "authorization_code");
+            bodyParams.add("code", authorizationCode);
+            bodyParams.add("redirect_uri", "http://localhost:8081/resource-server/keycloak/redirect");
 
-            if (username != null) {
-                Keycloak user = keycloakService.findByUsername(username);
-                userInfo = Optional.ofNullable(user);
-            } else if (email != null) {
-                Keycloak user = keycloakService.findByEmail(email);
-                userInfo = Optional.ofNullable(user);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/x-www-form-urlencoded");
+            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(bodyParams, headers);
+
+            ResponseEntity<Map> tokenResponse = restTemplate.exchange(tokenUrl, HttpMethod.POST, entity, Map.class);
+
+            String accessToken = (String) tokenResponse.getBody().get("access_token");
+
+            if (accessToken == null) {
+                throw new RuntimeException("Failed to obtain access token");
             }
 
-            if (userInfo.isEmpty()) {
-                return ResponseEntity.status(404).body("User not found.");
+            // 使用獲取的 Token 請求用戶資訊
+            String userInfoUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/userinfo";
+            HttpHeaders userHeaders = new HttpHeaders();
+            userHeaders.set("Authorization", "Bearer " + accessToken);
+            HttpEntity<String> userEntity = new HttpEntity<>(userHeaders);
+
+            ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userEntity,
+                    Map.class);
+            Map<String, Object> userInfo = userResponse.getBody();
+
+            if (userInfo != null) {
+                log.info("User Info: {}", userInfo);
+                return ResponseEntity.ok(userInfo);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User info not found.");
             }
-
-            return ResponseEntity.ok(userInfo.get());
-
         } catch (Exception e) {
-            log.error("Error fetching user information", e);
-            return ResponseEntity.status(500).body("An error occurred while fetching user information.");
+            log.error("Error retrieving user info", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving user info.");
         }
     }
+
 }
