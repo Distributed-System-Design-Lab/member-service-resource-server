@@ -6,7 +6,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "keycloak", indexes = {
-        @Index(name = "inx_username", columnList = "username"),
+        @Index(name = "inx_username", columnList = "preferred_username"),
         @Index(name = "inx_email", columnList = "email")
 })
 public class Keycloak {
@@ -42,7 +42,7 @@ public class Keycloak {
     @Column(name = "expires_in")
     private Instant expiresIn;
 
-    @Column(name = "issued_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "issued_at")
     private Instant issuedAt;
 
     public Keycloak() {

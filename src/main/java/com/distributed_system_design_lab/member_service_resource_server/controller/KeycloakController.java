@@ -51,12 +51,28 @@ public class KeycloakController {
     private String clientId = "peoplesystem";
     private String clientSecret = "7YQeh5Rfd73E5tliixooqDXJyn5Dhpet";
 
+    private void setSessionAttribute(HttpSession session, String attributeName, Object value) {
+        session.setAttribute(attributeName, value);
+        log.info("Session Attribute '{}' set to: {}, Session ID: {}", attributeName, value, session.getId());
+    }
+
+    private Object getSessionAttribute(HttpSession session, String attributeName) {
+        Object value = session.getAttribute(attributeName);
+        log.info("Session Attribute '{}' retrieved: {}, Session ID: {}", attributeName, value, session.getId());
+        return value;
+    }
+
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response, HttpSession session)
             throws IOException {
         System.err.println(code);
         String redirectUri = "http://localhost:8081/resource-server/keycloak/redirect";
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
+
+        String sessionId = session.getId();
+        log.info("Session ID during login: {}", sessionId);
+        log.info("Session creation time: {}", new Date(session.getCreationTime()));
+        log.info("Session last accessed time: {}", new Date(session.getLastAccessedTime()));
 
         try {
             // 創建 JWT
@@ -111,8 +127,12 @@ public class KeycloakController {
 
             // Log Keycloak user info
             log.info("Keycloak User Info: {}", userInfo);
+
             String preferredUsername = (String) userInfo.get("preferred_username");
-            session.setAttribute("preferred_username", preferredUsername);
+            setSessionAttribute(session, "preferred_username", preferredUsername);
+            log.info("Session Attribute 'preferred_username' set to: {}, {}",
+                    getSessionAttribute(session, "preferred_username"), sessionId);
+
             // Extract user info
             keycloakService.deleteByUsername(preferredUsername);
 
@@ -145,10 +165,16 @@ public class KeycloakController {
 
     // Logout API to revoke tokens
     @CrossOrigin
-    @PostMapping("/logout")
+    @GetMapping("/logout")
     public ResponseEntity<?> logout(HttpSession session) {
+        String sessionId = session.getId();
+        log.info("Logout Session ID: {}", sessionId);
+
         String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
-        String preferredUsername = (String) session.getAttribute("preferred_username");
+
+        String preferredUsername = (String) getSessionAttribute(session, "preferred_username");
+        log.info("Preferred Username from session: {}", preferredUsername);
+
         if (preferredUsername == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No user found in session.");
         }
@@ -157,7 +183,7 @@ public class KeycloakController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
         }
         String refreshToken = keycloakUser.getRefreshToken();
-        System.err.println("refreshToken" + refreshToken);
+        log.info("Refresh Token: {}", refreshToken);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/x-www-form-urlencoded");
 
@@ -171,7 +197,6 @@ public class KeycloakController {
         try {
             restTemplate.exchange(logoutUrl, HttpMethod.POST, entity, String.class);
             keycloakService.deleteByUsername(preferredUsername);
-            session.invalidate();
 
             return ResponseEntity.ok("Logout successful");
         } catch (Exception e) {
