@@ -170,20 +170,22 @@ public class KeycloakController {
         String sessionId = session.getId();
         log.info("Logout Session ID: {}", sessionId);
 
-        String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
-
         String preferredUsername = (String) getSessionAttribute(session, "preferred_username");
         log.info("Preferred Username from session: {}", preferredUsername);
 
         if (preferredUsername == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No user found in session.");
         }
+
         Keycloak keycloakUser = keycloakService.findByUsername(preferredUsername);
         if (keycloakUser == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
         }
+
         String refreshToken = keycloakUser.getRefreshToken();
         log.info("Refresh Token: {}", refreshToken);
+
+        String logoutUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/logout";
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/x-www-form-urlencoded");
 
