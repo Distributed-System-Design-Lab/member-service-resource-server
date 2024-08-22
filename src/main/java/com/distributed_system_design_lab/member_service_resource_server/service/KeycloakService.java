@@ -28,4 +28,8 @@ public class KeycloakService {
     public void deleteByUsername(String preferredUsername) {
         keycloakRepository.deleteByPreferredUsername(preferredUsername);
     }
+
+    public Keycloak findByAccessToken(String accessToken) {
+        return keycloakRepository.findByAccessToken(accessToken);
+    }
 }

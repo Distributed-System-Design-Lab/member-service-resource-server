@@ -13,4 +13,7 @@ public interface KeycloakRepository extends JpaRepository<Keycloak, Long> {
     Keycloak findByEmail(String email);
 
     void deleteByPreferredUsername(String preferredUsername);
+
+    Keycloak findByAccessToken(String accessToken);
+
 }
