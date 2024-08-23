@@ -31,7 +31,7 @@ keycloak:
   public-client: false
   cors: true
   credentials:
-    secret: ionH1sel1E2cKwWxVMt67BoPRAjOCn0j
+    secret: nbc9jc8M4uNZ3KQuiHJUTvvY9lhnJwnq
   bearer-only: true
   security-constraints:
     - authRoles: default-roles-peoplesystem

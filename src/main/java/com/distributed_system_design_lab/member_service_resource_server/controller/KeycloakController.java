@@ -41,7 +41,7 @@ public class KeycloakController {
     private KeycloakService keycloakService;
 
     private String clientId = "peoplesystem";
-    private String clientSecret = "ionH1sel1E2cKwWxVMt67BoPRAjOCn0j";
+    private String clientSecret = "nbc9jc8M4uNZ3KQuiHJUTvvY9lhnJwnq";
 
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response)
@@ -50,6 +50,9 @@ public class KeycloakController {
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {
+            // 打印接收到的授权码
+            log.info("Received authorization code: {}", code);
+
             // Token Request
             MultiValueMap<String, String> tokenParams = new LinkedMultiValueMap<>();
             tokenParams.add("client_id", clientId);
@@ -66,6 +69,10 @@ public class KeycloakController {
             String accessToken = (String) tokenResponse.getBody().get("access_token");
             String refreshToken = (String) tokenResponse.getBody().get("refresh_token");
 
+            // 打印获得的令牌
+            log.info("Access Token: {}", accessToken);
+            log.info("Refresh Token: {}", refreshToken);
+
             if (accessToken == null || refreshToken == null) {
                 throw new RuntimeException("Failed to obtain access token");
             }
@@ -80,10 +87,15 @@ public class KeycloakController {
                     Map.class);
             Map<String, Object> userInfo = userResponse.getBody();
 
+            // 打印用户信息
+            log.info("User Info: {}", userInfo);
+
             String preferredUsername = (String) userInfo.get("preferred_username");
             if (preferredUsername == null) {
                 throw new RuntimeException("Failed to retrieve user info");
             }
+
+            keycloakService.deleteByUsername(preferredUsername);
 
             // Save or Update User
             Keycloak user = new Keycloak();
@@ -99,7 +111,11 @@ public class KeycloakController {
             user.setExpiresIn(Instant.now().plusSeconds(3600));
             keycloakService.saveKeycloakData(user);
 
-            // Redirect
+            response.setHeader("Set-Cookie", "refreshToken=; Path=/; Max-Age=0; SameSite=Lax");
+            // 设置Cookie并重定向到前端
+            response.addHeader("Set-Cookie", "authorizationCode=" + code + "; Path=/; SameSite=Lax");
+            response.addHeader("Set-Cookie", "refreshToken=" + refreshToken + "; Path=/; SameSite=Lax");
+
             response.sendRedirect(
                     "http://localhost:3000/" + "?username=" + preferredUsername + "&email=" + user.getEmail()
                             + "&token=" + accessToken);
@@ -138,6 +154,39 @@ public class KeycloakController {
         } catch (Exception e) {
             log.error("Logout failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Logout failed");
+        }
+    }
+
+    @CrossOrigin
+    @GetMapping("/introspect")
+    public ResponseEntity<?> introspectToken(@RequestParam("token") String token) {
+        String introspectUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token/introspect";
+
+        try {
+            // 设置请求参数
+            MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
+            bodyParams.add("client_id", clientId);
+            bodyParams.add("client_secret", clientSecret);
+            bodyParams.add("token", token);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/x-www-form-urlencoded");
+            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(bodyParams, headers);
+
+            // 发起 introspection 请求
+            ResponseEntity<Map> introspectResponse = restTemplate.exchange(introspectUrl, HttpMethod.POST, entity,
+                    Map.class);
+            Map<String, Object> introspectionResult = introspectResponse.getBody();
+
+            // 检查 introspection 结果
+            if (introspectionResult != null && Boolean.TRUE.equals(introspectionResult.get("active"))) {
+                return ResponseEntity.ok(introspectionResult);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token is not active or invalid.");
+            }
+        } catch (Exception e) {
+            log.error("Error introspecting token", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error introspecting token.");
         }
     }
 
