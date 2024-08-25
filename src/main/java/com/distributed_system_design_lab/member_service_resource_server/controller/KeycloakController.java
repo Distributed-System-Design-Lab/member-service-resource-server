@@ -2,9 +2,7 @@ package com.distributed_system_design_lab.member_service_resource_server.control
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Date;
 import java.util.Map;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +39,7 @@ public class KeycloakController {
     private KeycloakService keycloakService;
 
     private String clientId = "peoplesystem";
-    private String clientSecret = "nbc9jc8M4uNZ3KQuiHJUTvvY9lhnJwnq";
+    private String clientSecret = "5jsKBbSmHOTiNksq0H4zh5VMLNluwzv6";
 
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response)
@@ -50,7 +48,6 @@ public class KeycloakController {
         String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
 
         try {
-            // 打印接收到的授权码
             log.info("Received authorization code: {}", code);
 
             // Token Request
@@ -69,7 +66,6 @@ public class KeycloakController {
             String accessToken = (String) tokenResponse.getBody().get("access_token");
             String refreshToken = (String) tokenResponse.getBody().get("refresh_token");
 
-            // 打印获得的令牌
             log.info("Access Token: {}", accessToken);
             log.info("Refresh Token: {}", refreshToken);
 
@@ -87,7 +83,6 @@ public class KeycloakController {
                     Map.class);
             Map<String, Object> userInfo = userResponse.getBody();
 
-            // 打印用户信息
             log.info("User Info: {}", userInfo);
 
             String preferredUsername = (String) userInfo.get("preferred_username");
@@ -163,7 +158,6 @@ public class KeycloakController {
         String introspectUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token/introspect";
 
         try {
-            // 设置请求参数
             MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
             bodyParams.add("client_id", clientId);
             bodyParams.add("client_secret", clientSecret);
@@ -173,12 +167,10 @@ public class KeycloakController {
             headers.set("Content-Type", "application/x-www-form-urlencoded");
             HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(bodyParams, headers);
 
-            // 发起 introspection 请求
             ResponseEntity<Map> introspectResponse = restTemplate.exchange(introspectUrl, HttpMethod.POST, entity,
                     Map.class);
             Map<String, Object> introspectionResult = introspectResponse.getBody();
 
-            // 检查 introspection 结果
             if (introspectionResult != null && Boolean.TRUE.equals(introspectionResult.get("active"))) {
                 return ResponseEntity.ok(introspectionResult);
             } else {
