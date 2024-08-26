@@ -31,7 +31,7 @@ keycloak:
   public-client: false
   cors: true
   credentials:
-    secret: 5jsKBbSmHOTiNksq0H4zh5VMLNluwzv6
+    secret: jD6SgkVLmorD0FoHlJlfKMbWyi5FYkg2
 
   bearer-only: true
   security-constraints:

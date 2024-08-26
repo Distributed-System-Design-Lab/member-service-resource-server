@@ -2,6 +2,7 @@ package com.distributed_system_design_lab.member_service_resource_server.control
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -11,11 +12,14 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,7 +43,8 @@ public class KeycloakController {
     private KeycloakService keycloakService;
 
     private String clientId = "peoplesystem";
-    private String clientSecret = "5jsKBbSmHOTiNksq0H4zh5VMLNluwzv6";
+    private String clientSecret = "jD6SgkVLmorD0FoHlJlfKMbWyi5FYkg2";
+    private String realm = "PeopleSystem";
 
     @GetMapping("/redirect")
     public void keycloakRedirect(@RequestParam("code") String code, HttpServletResponse response)
@@ -107,9 +112,9 @@ public class KeycloakController {
             keycloakService.saveKeycloakData(user);
 
             response.setHeader("Set-Cookie", "refreshToken=; Path=/; Max-Age=0; SameSite=Lax");
-            // 设置Cookie并重定向到前端
             response.addHeader("Set-Cookie", "authorizationCode=" + code + "; Path=/; SameSite=Lax");
             response.addHeader("Set-Cookie", "refreshToken=" + refreshToken + "; Path=/; SameSite=Lax");
+            response.addHeader("Set-Cookie", "accessToken=" + accessToken + "; Path=/; SameSite=Lax");
 
             response.sendRedirect(
                     "http://localhost:3000/" + "?username=" + preferredUsername + "&email=" + user.getEmail()
@@ -182,46 +187,88 @@ public class KeycloakController {
         }
     }
 
-    @GetMapping("/getUserInfo")
-    public ResponseEntity<?> getUserInfo(@RequestParam("authorizationCode") String authorizationCode) {
-        String tokenUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
+    @CrossOrigin
+    @PostMapping("/createUser")
+    public ResponseEntity<?> createUser(@RequestBody Map<String, String> userDetails,
+            @RequestParam("accessToken") String accessToken) {
 
         try {
-            MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
-            bodyParams.add("client_id", clientId);
-            bodyParams.add("client_secret", clientSecret);
-            bodyParams.add("grant_type", "authorization_code");
-            bodyParams.add("code", authorizationCode);
-            bodyParams.add("redirect_uri", "http://localhost:8081/resource-server/keycloak/redirect");
+            String url = "http://localhost:8083/auth/admin/realms/" + realm + "/users";
+            Map<String, Object> userRepresentation = new HashMap<>();
+            userRepresentation.put("username", userDetails.get("username"));
+            userRepresentation.put("email", userDetails.get("email"));
+            userRepresentation.put("firstName", userDetails.get("firstName"));
+            userRepresentation.put("lastName", userDetails.get("lastName"));
+            userRepresentation.put("enabled", true);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Content-Type", "application/x-www-form-urlencoded");
-            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(bodyParams, headers);
+            headers.set("Authorization", "Bearer " + accessToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ResponseEntity<Map> tokenResponse = restTemplate.exchange(tokenUrl, HttpMethod.POST, entity, Map.class);
-            String accessToken = (String) tokenResponse.getBody().get("access_token");
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(userRepresentation, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
-            if (accessToken == null) {
-                throw new RuntimeException("Failed to obtain access token");
-            }
-
-            String userInfoUrl = "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/userinfo";
-            HttpHeaders userHeaders = new HttpHeaders();
-            userHeaders.set("Authorization", "Bearer " + accessToken);
-            HttpEntity<String> userEntity = new HttpEntity<>(userHeaders);
-
-            ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userEntity,
-                    Map.class);
-            Map<String, Object> userInfo = userResponse.getBody();
-
-            if (userInfo != null) {
-                return ResponseEntity.ok(userInfo);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return ResponseEntity.ok("User created successfully.");
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User info not found.");
+                return ResponseEntity.status(response.getStatusCode()).body("Failed to create user.");
             }
+
         } catch (Exception e) {
-            log.error("Error retrieving user info", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving user info.");
+            log.error("Error creating user", e);
+            return ResponseEntity.status(500).body("Error creating user.");
         }
     }
+
+    // @GetMapping("/getUserInfo")
+    // public ResponseEntity<?> getUserInfo(@RequestParam("authorizationCode")
+    // String authorizationCode) {
+    // String tokenUrl =
+    // "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/token";
+
+    // try {
+    // MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
+    // bodyParams.add("client_id", clientId);
+    // bodyParams.add("client_secret", clientSecret);
+    // bodyParams.add("grant_type", "authorization_code");
+    // bodyParams.add("code", authorizationCode);
+    // bodyParams.add("redirect_uri",
+    // "http://localhost:8081/resource-server/keycloak/redirect");
+
+    // HttpHeaders headers = new HttpHeaders();
+    // headers.set("Content-Type", "application/x-www-form-urlencoded");
+    // HttpEntity<MultiValueMap<String, String>> entity = new
+    // HttpEntity<>(bodyParams, headers);
+
+    // ResponseEntity<Map> tokenResponse = restTemplate.exchange(tokenUrl,
+    // HttpMethod.POST, entity, Map.class);
+    // String accessToken = (String) tokenResponse.getBody().get("access_token");
+
+    // if (accessToken == null) {
+    // throw new RuntimeException("Failed to obtain access token");
+    // }
+
+    // String userInfoUrl =
+    // "http://localhost:8083/auth/realms/PeopleSystem/protocol/openid-connect/userinfo";
+    // HttpHeaders userHeaders = new HttpHeaders();
+    // userHeaders.set("Authorization", "Bearer " + accessToken);
+    // HttpEntity<String> userEntity = new HttpEntity<>(userHeaders);
+
+    // ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl,
+    // HttpMethod.GET, userEntity,
+    // Map.class);
+    // Map<String, Object> userInfo = userResponse.getBody();
+
+    // if (userInfo != null) {
+    // return ResponseEntity.ok(userInfo);
+    // } else {
+    // return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User info not
+    // found.");
+    // }
+    // } catch (Exception e) {
+    // log.error("Error retrieving user info", e);
+    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error
+    // retrieving user info.");
+    // }
+    // }
 }
